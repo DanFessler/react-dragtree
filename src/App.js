@@ -2,7 +2,10 @@ import React, { Component } from 'react';
 import ReactCursorPosition from 'react-cursor-position';
 import './App.css';
 
-//import logo from './logo.svg'; <img src={logo} className="App-logo" alt="logo" />
+// TODO:
+// prevent targeting currently dragged items
+// handle dragging to empty script containers
+// bug when dragging an item over c-block from bottom
 
 class App extends Component {
 
