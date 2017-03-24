@@ -51,9 +51,9 @@ class App extends Component {
   setShiftUp = (event) => {
     if(event.keyCode === 16 || event.charCode === 16){
       this.setState({shiftKey: false});
+      this.moveLine([0],[1]);
     }
   };
-
 
   assignKey = (script) => {
     script.map(function(line, i){
@@ -77,7 +77,7 @@ class App extends Component {
     let scriptA = this.find(A, script, false, true);
     let scriptB = this.find(B, script, false, true);
 
-    console.log(scriptA);
+    console.log(A);
 
     let line = Object.assign(scriptA.arr[scriptA.index], {});
 
@@ -104,7 +104,10 @@ class App extends Component {
   handleHover = (i, event) => {
     console.log(i);
     if (this.state.dragging !== null) {
-      //this.moveLine(this.state.dragging, i);
+      if (JSON.stringify(this.state.dragging) !== JSON.stringify(i)) {
+        this.moveLine(this.state.dragging, i);
+        this.setState({dragging: i});
+      }
     }
   }
 
@@ -133,57 +136,15 @@ class App extends Component {
     return (
       <div className="App">
         <ReactCursorPosition>
-          <BlockScript onMouseDown={this.startDrag} onMouseOver={this.handleHover} script={this.state.rows} index={[]}/>
+          <BlockScript
+            index={[]}
+            onMouseDown={this.startDrag}
+            onMouseOver={this.handleHover}
+            script={this.state.rows}
+            dragBlock={this.state.dragging}
+          />
           {dragScript}
         </ReactCursorPosition>
-      </div>
-    );
-  }
-}
-
-class BlockScript extends Component {
-
-  handleClick = (i) => {
-    if (this.props.onMouseDown) this.props.onMouseDown(this.props.index.concat(i))
-  }
-
-  handleHover = (i) => {
-    if (this.props.onMouseOver) this.props.onMouseOver(this.props.index.concat(i))
-  }
-
-  preventPropegation = (e) => {
-    e.stopPropagation();
-  }
-
-  render() {
-    let style = {
-      script: {
-        backgroundColor: "RGBA(0,25,50,0.1)",
-        pointerEvents: "none"
-      },
-      childScript: {
-        backgroundColor: "white",
-        border: "1px solid RGBA(0,25,50,0.1)",
-        borderBottom: "2px solid RGBA(0,50,100,0.3)",
-        borderRight: "none",
-        marginTop: 10,
-        borderRadius: "6px 0 0 6px",
-        overflow: "hidden",
-        position: "relative",
-      },
-    }
-
-    return (
-      <div style={style.script}>
-      {
-        this.props.script.map(function(block, i, arr) {
-          return (
-            <Block key={block.key} label={block.label} index={i} onMouseDown={this.handleClick} onMouseOver={this.handleHover} last={i+1===arr.length? true : false}>
-              {block.children? <div style={style.childScript} onMouseDown={this.preventPropegation}><BlockScript onMouseDown={this.handleClick} onMouseOver={this.handleHover} index={[i]} script={block.children} /></div> : null}
-            </Block>
-          )
-        }, this)
-      }
       </div>
     );
   }
@@ -202,10 +163,13 @@ class Block extends Component {
   }
 
   render() {
+    let isDragging = JSON.stringify(this.props.dragBlock) === JSON.stringify(this.props.index);
+
     let style = {
       label: {
         paddingRight: 10,
-        color: "rgba(0,25,40,0.7)"
+        color: "rgba(0,25,40,0.7)",
+        padding: "6px 6px", paddingRight: 0,
       },
       block: {
         boxSizing: "border-box",
@@ -213,24 +177,100 @@ class Block extends Component {
         userSelect: "none",
         cursor: "default",
         backgroundColor: "white",
-        //borderBottom: "1px solid RGBA(0,0,0,0.125)",
-        borderBottom: this.props.last? "none" : "2px solid RGBA(0,25,50,0.1)",
-        //marginBottom: 2,
-        padding: "10px 10px", paddingRight: 0,
+        borderBottom: this.props.last? "none" : "1px solid RGBA(0,25,50,0.1)",
         position: "relative",
-        borderRadius: 2,
-        //width: "calc(100% + 2px)"
+        //borderRadius: 2,
+
+        opacity: isDragging? 0.25 : 1,
+        //visibility: isDragging? "hidden" : "inherit"
       },
     }
 
     return (
       <div style={style.block}
-      onMouseOver={this.handleHover}
-      onMouseDown={this.handleClick} >
+        onMouseOver={this.handleHover}
+        onMouseDown={this.handleClick} >
         <div style={style.label}>{this.props.label}</div>
         {this.props.children}
       </div>
     )
+  }
+}
+
+class BlockScript extends Component {
+
+  handleClick = (i) => {
+    if (this.props.onMouseDown) this.props.onMouseDown(i)
+  }
+
+  handleHover = (i) => {
+    if (this.props.onMouseOver) this.props.onMouseOver(i)
+  }
+
+  preventPropegation = (e) => {
+    e.stopPropagation();
+  }
+
+  render() {
+    let style = {
+      script: {
+        backgroundColor: "RGBA(0,25,50,0.1)",
+        pointerEvents: "none"
+      },
+      childScript: {
+        backgroundColor: "white",
+        border: "0.5px solid RGBA(0,25,50,0.1)",
+        //borderBottom: "1px solid RGBA(0,50,100,0.3)",
+        borderRight: "none",
+        //borderRadius: "6px 0 0 6px",
+        overflow: "hidden",
+        position: "relative",
+        marginLeft: 8,
+        marginBottom: 8,
+      },
+    }
+
+
+
+    return (
+      <div style={style.script}>
+        {
+          this.props.script.map(function(block, i, arr) {
+            let blockIndex = this.props.index ? this.props.index.concat(i) : null;
+            let dragBlock = this.props.dragBlock;
+            let isDragging = JSON.stringify(dragBlock) === JSON.stringify(blockIndex);
+
+            return (
+              <Block
+                key={block.key}
+                label={block.label}
+                index={blockIndex}
+                onMouseDown={this.handleClick}
+                onMouseOver={this.handleHover}
+                last={i+1===arr.length? true : false}
+                dragBlock={dragBlock}
+              >
+
+                {
+                  block.children && !isDragging?
+                    <div style={style.childScript} onMouseDown={this.preventPropegation}>
+                      <BlockScript
+                        index={blockIndex}
+                        onMouseDown={this.handleClick}
+                        onMouseOver={this.handleHover}
+                        script={block.children}
+                        dragBlock={dragBlock}
+                      />
+                    </div> :
+                  null
+                }
+
+              </Block>
+            )
+          }, this)
+        }
+      </div>
+    );
   }
 }
 
@@ -241,14 +281,16 @@ class DragScript extends Component {
         backgroundColor: "white",
         position: "absolute",
         minWidth: 200,
+        width: "100%",
+        //opacity: "0.5",
         boxShadow: "0 3px 8px RGBA(0,0,0,0.125)",
         top: this.props.cursorPosition.y + 5,
-        left: this.props.cursorPosition.x - 20,
+        left: this.props.cursorPosition.x + 20,
 
         pointerEvents: "none",
-        border: "1px solid RGBA(0,25,50,0.1)",
-        borderBottom: "2px solid RGBA(0,50,100,0.3)",
-        borderRadius: "6px",
+        border: "0.5px solid RGBA(0,25,50,0.1)",
+        // borderBottom: "1px solid RGBA(0,50,100,0.3)",
+        // borderRadius: "6px",
         overflow: "hidden",
       }
     }
